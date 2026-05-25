@@ -1,0 +1,33 @@
+{
+  "name": "slack-archiver",
+  "version": "0.1.0",
+  "description": "Archive Slack channel history to SQLite to survive the free-tier 10K message cap.",
+  "private": true,
+  "main": "dist/index.js",
+  "bin": {
+    "slack-archiver": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@slack/web-api": "^7.7.0",
+    "better-sqlite3": "^11.3.0",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}

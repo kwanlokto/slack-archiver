@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Slack Archiver</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Slack Archiver</h1>
+    <div class="admin-bar">
+      <label>Admin password:
+        <input id="admin-password" type="password" autocomplete="off" placeholder="x-admin-password header" />
+      </label>
+      <button id="save-password">Save</button>
+      <span id="auth-hint" class="hint">stored in localStorage only</span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Channels</h2>
+      <form id="add-form">
+        <input id="add-input" placeholder="C0123ABCD or #general" required />
+        <button type="submit">Add</button>
+        <button type="button" id="tick-now">Run extraction now</button>
+      </form>
+      <table id="channels-table">
+        <thead>
+          <tr><th>Channel</th><th>Status</th><th>Messages</th><th>Last archived</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Search</h2>
+      <form id="search-form">
+        <input id="search-input" placeholder="search archived messages (FTS5)" required />
+        <select id="search-channel"><option value="">all channels</option></select>
+        <button type="submit">Search</button>
+      </form>
+      <ol id="search-results"></ol>
+    </section>
+
+    <section>
+      <h2>Browse</h2>
+      <div class="browse-controls">
+        <select id="browse-channel"><option value="">pick a channel</option></select>
+        <button id="browse-load">Load latest 100</button>
+      </div>
+      <ol id="browse-results"></ol>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
