@@ -28,45 +28,42 @@ This tool keeps a permanent copy of channels you care about.
 ## Requirements
 
 - Node.js 18+
-- A Slack User OAuth token (`xoxp-...`) belonging to a Workspace Owner.
+- The ability to install a Slack app in a workspace where you are an **Owner**
+  (one-time, ~2 min).
 
-## Slack app setup
-
-1. Go to <https://api.slack.com/apps> → **Create New App** → From scratch.
-2. Under **OAuth & Permissions** → **User Token Scopes**, add:
-   - `channels:history`, `channels:read`
-   - `groups:history`, `groups:read`
-   - `users:read`, `team:read`
-   - (optional) `im:history`, `im:read`, `mpim:history`, `mpim:read`
-3. Install the app to your workspace and copy the **User OAuth Token** (starts with
-   `xoxp-`).
-4. For private channels, the token's user must be a member of the channel.
-
-## Install
+## Quick start
 
 ```sh
 npm install
-cp .env.example .env
-# edit .env — at minimum SLACK_TOKEN and ADMIN_PASSWORD
-```
-
-## Run the daemon
-
-```sh
+cp .env.example .env       # set ADMIN_PASSWORD (everything else is optional)
 npm run build
 npm start
-# or for development:
-npm run dev
 ```
 
-On startup the daemon:
+Then open <http://127.0.0.1:3000/setup.html> and walk through the wizard:
 
-1. Verifies the token is valid and belongs to an Owner (otherwise it refuses to run).
-2. Starts the cron scheduler (`SCHEDULE_CRON`, default every 10 minutes).
-3. Kicks off an immediate extraction so a freshly-started instance catches up.
-4. Starts the REST API + web UI on `API_HOST:API_PORT` (default `127.0.0.1:3000`).
+1. Enter the `ADMIN_PASSWORD` you set in `.env`.
+2. Create a Slack app at <https://api.slack.com/apps> → **From scratch**. The
+   wizard shows you the exact **Redirect URL** and **User Token Scopes** to add.
+3. Paste the app's **Client ID** and **Client Secret** into the wizard.
+4. Click **Sign in with Slack**, approve the scopes, and Slack redirects back
+   with a token. The daemon stores it in `data/credentials.json`, verifies you
+   are a Workspace Owner, and starts the scheduler.
 
-Open <http://127.0.0.1:3000> for the admin UI.
+No copy-paste of `xoxp-` tokens required.
+
+### Skipping the wizard (advanced)
+
+If you already have a `xoxp-` user token, set `SLACK_TOKEN=xoxp-...` in `.env`
+and the daemon will use it without showing the wizard.
+
+## What the daemon does
+
+- Starts the REST API + web UI on `API_HOST:API_PORT` (default
+  `127.0.0.1:3000`).
+- Once a Slack connection exists, runs `SCHEDULE_CRON` (default every 10 min) to
+  pull new messages, and kicks off an immediate extraction on every (re)connect.
+- Refuses to archive unless the connected user is a Workspace Owner.
 
 ## CLI
 
@@ -101,6 +98,11 @@ match `ADMIN_PASSWORD` from the environment.
 | PATCH  | `/api/channels/:slackId` `{ "enabled": false }` | admin | Pause/resume scheduling |
 | POST   | `/api/channels/:slackId/extract` | admin | Trigger one extraction for that channel |
 | POST   | `/api/scheduler/tick` | admin | Trigger a full extraction across all channels |
+| GET    | `/api/setup/status` | — | Current connection status |
+| POST   | `/api/setup/credentials` `{ "client_id": "...", "client_secret": "..." }` | admin | Save Slack app credentials |
+| GET    | `/api/setup/start` | — | 302 to Slack OAuth |
+| GET    | `/api/setup/callback?code=&state=` | — | OAuth redirect target |
+| POST   | `/api/setup/disconnect` | admin | Clear stored token |
 | GET    | `/healthz` | — | Liveness probe |
 
 ### Example

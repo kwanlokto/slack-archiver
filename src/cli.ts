@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { loadConfig } from "./config";
+import { loadConfig, Config } from "./config";
 import { Store } from "./db";
+import { CredentialsStore } from "./credentials";
 import { SlackClient } from "./slack";
 import { verifyOwner } from "./auth";
 import { extractAll, extractChannel } from "./archiver";
@@ -10,9 +11,23 @@ import { exportChannel, ExportFormat } from "./exporter";
 const program = new Command();
 program.name("slack-archiver").description("Archive Slack channels to SQLite").version("0.1.0");
 
+function getToken(cfg: Config): string {
+  const fromFile = new CredentialsStore(cfg.credentialsPath).getAccessToken();
+  const token = fromFile ?? cfg.envSlackToken;
+  if (!token) {
+    console.error(
+      "No Slack token configured.\n" +
+      "  - Start the daemon (`npm start`) and open http://127.0.0.1:3000/setup.html to sign in, OR\n" +
+      "  - Set SLACK_TOKEN in .env (a xoxp- user token).",
+    );
+    process.exit(1);
+  }
+  return token;
+}
+
 async function withDeps(): Promise<{ slack: SlackClient; store: Store }> {
   const cfg = loadConfig();
-  const slack = new SlackClient(cfg.slackToken);
+  const slack = new SlackClient(getToken(cfg));
   const store = new Store(cfg.dbPath);
   const owner = await verifyOwner(slack);
   if (!owner.ok) {
@@ -27,7 +42,7 @@ program
   .description("Check Slack token and owner status")
   .action(async () => {
     const cfg = loadConfig();
-    const slack = new SlackClient(cfg.slackToken);
+    const slack = new SlackClient(getToken(cfg));
     const owner = await verifyOwner(slack);
     console.log(JSON.stringify(owner, null, 2));
     if (!owner.ok) process.exit(1);

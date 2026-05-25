@@ -1,47 +1,33 @@
 import { loadConfig } from "./config";
 import { Store } from "./db";
-import { SlackClient } from "./slack";
-import { Scheduler } from "./scheduler";
-import { verifyOwner } from "./auth";
+import { CredentialsStore } from "./credentials";
+import { Runtime } from "./runtime";
 import { createServer } from "./api/server";
 
 async function main(): Promise<void> {
   const cfg = loadConfig();
-  const slack = new SlackClient(cfg.slackToken);
   const store = new Store(cfg.dbPath);
+  const credentials = new CredentialsStore(cfg.credentialsPath);
+  const runtime = new Runtime(cfg, store, credentials);
 
-  const owner = await verifyOwner(slack);
-  if (!owner.ok) {
-    console.error(
-      `Refusing to start: token belongs to @${owner.user} in ${owner.team}, who is not a workspace owner. ` +
-        `Only Workspace Owners may archive (is_owner=${owner.isOwner}, is_primary_owner=${owner.isPrimaryOwner}).`,
-    );
-    process.exit(1);
+  await runtime.initialize();
+  logStartupStatus(runtime);
+
+  if (!cfg.adminPassword) {
+    console.warn("[startup] WARNING: ADMIN_PASSWORD is empty — admin endpoints will refuse all writes");
   }
-  console.log(`[auth] running as @${owner.user} (${owner.team}) — owner verified`);
 
-  const scheduler = new Scheduler(slack, store, cfg.scheduleCron);
-  scheduler.start();
-
-  // Kick off an immediate tick so a freshly-started daemon catches up right away
-  // instead of waiting for the first scheduled fire.
-  void scheduler.tick();
-
-  const app = createServer({
-    store,
-    slack,
-    scheduler,
-    adminPassword: cfg.adminPassword,
-    exportDir: cfg.exportDir,
-  });
-
+  const app = createServer(runtime, cfg.adminPassword);
   const server = app.listen(cfg.apiPort, cfg.apiHost, () => {
     console.log(`[api] listening on http://${cfg.apiHost}:${cfg.apiPort}`);
+    if (runtime.status.state !== "ready") {
+      console.log(`[api] open http://${cfg.apiHost}:${cfg.apiPort}/setup.html to finish setup`);
+    }
   });
 
   const shutdown = (signal: string) => {
     console.log(`\n[main] ${signal} received — shutting down`);
-    scheduler.stop();
+    runtime.stop();
     server.close(() => {
       store.close();
       process.exit(0);
@@ -49,6 +35,27 @@ async function main(): Promise<void> {
   };
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+function logStartupStatus(runtime: Runtime): void {
+  const s = runtime.status;
+  switch (s.state) {
+    case "ready":
+      console.log(`[startup] active as @${s.user} (${s.team})`);
+      break;
+    case "not_owner":
+      console.warn(`[startup] @${s.user} in ${s.team} is not a workspace owner — scheduler not started`);
+      break;
+    case "credentials_only":
+      console.log("[startup] app credentials present, but no Slack token yet — visit /setup.html to sign in");
+      break;
+    case "error":
+      console.error(`[startup] activation error: ${s.message}`);
+      break;
+    case "unconfigured":
+      console.log("[startup] not configured yet — visit /setup.html to begin");
+      break;
+  }
 }
 
 main().catch((err) => {

@@ -4,43 +4,51 @@ import * as fs from "fs";
 
 dotenv.config();
 
-function required(name: string): string {
-  const v = process.env[name];
-  if (!v || v.trim() === "") {
-    throw new Error(`Missing required env var: ${name}. Copy .env.example to .env and fill it in.`);
-  }
-  return v;
-}
-
 function optional(name: string, fallback: string): string {
   const v = process.env[name];
   return v && v.trim() !== "" ? v : fallback;
 }
 
+function optionalEmpty(name: string): string | undefined {
+  const v = process.env[name];
+  return v && v.trim() !== "" ? v : undefined;
+}
+
 export interface Config {
-  slackToken: string;
+  /** Pre-configured token from .env (legacy / advanced use). The wizard's stored token takes precedence. */
+  envSlackToken: string | undefined;
   dbPath: string;
+  credentialsPath: string;
   exportDir: string;
   scheduleCron: string;
   apiPort: number;
   apiHost: string;
+  /** Public origin used to build the OAuth redirect URI. Must match a value registered in the Slack app. */
+  oauthRedirectUri: string;
   adminPassword: string;
 }
 
 export function loadConfig(): Config {
   const dbPath = path.resolve(optional("DB_PATH", "./data/archive.db"));
+  const credentialsPath = path.resolve(optional("CREDENTIALS_PATH", path.join(path.dirname(dbPath), "credentials.json")));
   const exportDir = path.resolve(optional("EXPORT_DIR", "./exports"));
 
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   fs.mkdirSync(exportDir, { recursive: true });
 
+  const apiPort = parseInt(optional("API_PORT", "3000"), 10);
+  const apiHost = optional("API_HOST", "127.0.0.1");
+  const oauthRedirectUri = optional("OAUTH_REDIRECT_URI", `http://127.0.0.1:${apiPort}/api/setup/callback`);
+
   return {
-    slackToken: required("SLACK_TOKEN"),
+    envSlackToken: optionalEmpty("SLACK_TOKEN"),
     dbPath,
+    credentialsPath,
     exportDir,
     scheduleCron: optional("SCHEDULE_CRON", "*/10 * * * *"),
-    apiPort: parseInt(optional("API_PORT", "3000"), 10),
-    apiHost: optional("API_HOST", "127.0.0.1"),
+    apiPort,
+    apiHost,
+    oauthRedirectUri,
     adminPassword: optional("ADMIN_PASSWORD", ""),
   };
 }

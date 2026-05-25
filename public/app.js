@@ -177,5 +177,23 @@ $("#browse-load").addEventListener("click", async () => {
   } catch (err) { toast(err.message, "err"); }
 });
 
+async function refreshStatus() {
+  try {
+    const s = await api("/setup/status");
+    const banner = $("#status-banner");
+    if (s.status.state === "ready") {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    banner.className = s.status.state === "not_owner" || s.status.state === "error" ? "banner err" : "banner warn";
+    const link = '<a href="/setup.html">Open setup wizard</a>';
+    banner.innerHTML = `${s.status.message} — ${link}`;
+  } catch {
+    /* ignore */
+  }
+}
+
 refreshChannels().catch((err) => toast(err.message, "err"));
-setInterval(() => refreshChannels().catch(() => {}), 30_000);
+refreshStatus();
+setInterval(() => { refreshChannels().catch(() => {}); refreshStatus(); }, 30_000);
