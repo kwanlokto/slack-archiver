@@ -19,16 +19,7 @@
     </section>
 
     <section>
-      <h2>Step 1 · Admin password</h2>
-      <p class="hint">Used to gate the wizard and the channel-management API. Set this in <code>.env</code> as <code>ADMIN_PASSWORD</code>, then enter it here.</p>
-      <form id="password-form">
-        <input id="admin-password" type="password" autocomplete="off" placeholder="admin password" />
-        <button type="submit">Use this password</button>
-      </form>
-    </section>
-
-    <section>
-      <h2>Step 2 · Create a Slack app</h2>
+      <h2>Step 1 · Create a Slack app</h2>
       <ol class="steps">
         <li>Open <a href="https://api.slack.com/apps" target="_blank" rel="noreferrer">api.slack.com/apps</a> → <strong>Create New App</strong> → <strong>From scratch</strong>. Pick the workspace you own.</li>
         <li>In the new app, go to <strong>OAuth &amp; Permissions</strong>.</li>
@@ -43,7 +34,7 @@
     </section>
 
     <section>
-      <h2>Step 3 · Save app credentials</h2>
+      <h2>Step 2 · Save app credentials</h2>
       <form id="creds-form">
         <input id="client-id" placeholder="Client ID" required />
         <input id="client-secret" type="password" placeholder="Client Secret" required />
@@ -53,14 +44,14 @@
     </section>
 
     <section>
-      <h2>Step 4 · Sign in with Slack</h2>
+      <h2>Step 3 · Sign in with Slack</h2>
       <p class="hint">Opens the Slack OAuth screen. After you approve, Slack will redirect back to this server with a token.</p>
       <a id="signin-link" class="button-link" href="/api/setup/start">Sign in with Slack</a>
       <button id="disconnect" class="danger" hidden>Disconnect</button>
     </section>
 
     <section>
-      <h2>Step 5 · Done</h2>
+      <h2>Step 4 · Done</h2>
       <p class="hint">Once signed in, the daemon will start archiving on the configured cron schedule.</p>
       <a id="open-admin" class="button-link" href="/" hidden>Open admin console →</a>
     </section>

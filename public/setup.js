@@ -1,9 +1,5 @@
 const $ = (sel) => document.querySelector(sel);
 
-const state = {
-  password: localStorage.getItem("admin-password") || "",
-};
-
 function toast(msg, kind = "ok") {
   const el = document.createElement("div");
   el.className = `toast ${kind}`;
@@ -14,7 +10,6 @@ function toast(msg, kind = "ok") {
 
 async function api(path, opts = {}) {
   const headers = { "content-type": "application/json", ...(opts.headers || {}) };
-  if (opts.admin) headers["x-admin-password"] = state.password;
   const res = await fetch(path, { ...opts, headers });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
@@ -70,14 +65,6 @@ async function loadStatus() {
   }
 }
 
-$("#password-form").addEventListener("submit", (e) => {
-  e.preventDefault();
-  state.password = $("#admin-password").value;
-  localStorage.setItem("admin-password", state.password);
-  toast("Password stored in browser");
-});
-$("#admin-password").value = state.password;
-
 $("#creds-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const client_id = $("#client-id").value.trim();
@@ -86,7 +73,6 @@ $("#creds-form").addEventListener("submit", async (e) => {
     await api("/api/setup/credentials", {
       method: "POST",
       body: JSON.stringify({ client_id, client_secret }),
-      admin: true,
     });
     toast("Credentials saved");
     $("#client-secret").value = "";
@@ -99,7 +85,7 @@ $("#creds-form").addEventListener("submit", async (e) => {
 $("#disconnect").addEventListener("click", async () => {
   if (!confirm("Disconnect from Slack? You'll need to sign in again to resume archiving.")) return;
   try {
-    await api("/api/setup/disconnect", { method: "POST", admin: true });
+    await api("/api/setup/disconnect", { method: "POST" });
     toast("Disconnected");
     await loadStatus();
   } catch (err) {

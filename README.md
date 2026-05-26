@@ -35,22 +35,25 @@ This tool keeps a permanent copy of channels you care about.
 
 ```sh
 npm install
-cp .env.example .env       # set ADMIN_PASSWORD (everything else is optional)
+cp .env.example .env       # optional — all values have working defaults
 npm run build
 npm start
 ```
 
 Then open <http://127.0.0.1:3000/setup.html> and walk through the wizard:
 
-1. Enter the `ADMIN_PASSWORD` you set in `.env`.
-2. Create a Slack app at <https://api.slack.com/apps> → **From scratch**. The
+1. Create a Slack app at <https://api.slack.com/apps> → **From scratch**. The
    wizard shows you the exact **Redirect URL** and **User Token Scopes** to add.
-3. Paste the app's **Client ID** and **Client Secret** into the wizard.
-4. Click **Sign in with Slack**, approve the scopes, and Slack redirects back
+2. Paste the app's **Client ID** and **Client Secret** into the wizard.
+3. Click **Sign in with Slack**, approve the scopes, and Slack redirects back
    with a token. The daemon stores it in `data/credentials.json`, verifies you
    are a Workspace Owner, and starts the scheduler.
 
 No copy-paste of `xoxp-` tokens required.
+
+> **Security model.** The HTTP API has no built-in auth — it binds to
+> `127.0.0.1` by default and trusts everything on localhost. If you change
+> `API_HOST` to a non-loopback address, put a reverse proxy with auth in front.
 
 ### Skipping the wizard (advanced)
 
@@ -84,26 +87,25 @@ bin.)
 
 ## REST API
 
-Read endpoints are open. Write endpoints require the `x-admin-password` header to
-match `ADMIN_PASSWORD` from the environment.
+No auth — protected by binding to loopback only.
 
-| Method | Path | Auth | Description |
-| --- | --- | --- | --- |
-| GET    | `/api/channels` | — | List archived channels with counts |
-| GET    | `/api/channels/:slackId/messages?limit=&offset=&before=&after=` | — | Paginated messages (ascending by ts) |
-| GET    | `/api/search?q=&channel=&limit=` | — | FTS5 search across the archive |
-| GET    | `/api/channels/:slackId/export?format=json\|jsonl\|csv\|txt` | — | Download an export file |
-| POST   | `/api/channels` `{ "channel": "#general" }` | admin | Add a channel |
-| DELETE | `/api/channels/:slackId` | admin | Remove a channel and all its messages |
-| PATCH  | `/api/channels/:slackId` `{ "enabled": false }` | admin | Pause/resume scheduling |
-| POST   | `/api/channels/:slackId/extract` | admin | Trigger one extraction for that channel |
-| POST   | `/api/scheduler/tick` | admin | Trigger a full extraction across all channels |
-| GET    | `/api/setup/status` | — | Current connection status |
-| POST   | `/api/setup/credentials` `{ "client_id": "...", "client_secret": "..." }` | admin | Save Slack app credentials |
-| GET    | `/api/setup/start` | — | 302 to Slack OAuth |
-| GET    | `/api/setup/callback?code=&state=` | — | OAuth redirect target |
-| POST   | `/api/setup/disconnect` | admin | Clear stored token |
-| GET    | `/healthz` | — | Liveness probe |
+| Method | Path | Description |
+| --- | --- | --- |
+| GET    | `/api/channels` | List archived channels with counts |
+| GET    | `/api/channels/:slackId/messages?limit=&offset=&before=&after=` | Paginated messages (ascending by ts) |
+| GET    | `/api/search?q=&channel=&limit=` | FTS5 search across the archive |
+| GET    | `/api/channels/:slackId/export?format=json\|jsonl\|csv\|txt` | Download an export file |
+| POST   | `/api/channels` `{ "channel": "#general" }` | Add a channel |
+| DELETE | `/api/channels/:slackId` | Remove a channel and all its messages |
+| PATCH  | `/api/channels/:slackId` `{ "enabled": false }` | Pause/resume scheduling |
+| POST   | `/api/channels/:slackId/extract` | Trigger one extraction for that channel |
+| POST   | `/api/scheduler/tick` | Trigger a full extraction across all channels |
+| GET    | `/api/setup/status` | Current connection status |
+| POST   | `/api/setup/credentials` `{ "client_id": "...", "client_secret": "..." }` | Save Slack app credentials |
+| GET    | `/api/setup/start` | 302 to Slack OAuth |
+| GET    | `/api/setup/callback?code=&state=` | OAuth redirect target |
+| POST   | `/api/setup/disconnect` | Clear stored token |
+| GET    | `/healthz` | Liveness probe |
 
 ### Example
 
@@ -112,7 +114,6 @@ curl http://127.0.0.1:3000/api/channels
 
 curl -X POST http://127.0.0.1:3000/api/channels \
   -H 'content-type: application/json' \
-  -H 'x-admin-password: change-me' \
   -d '{"channel": "#general"}'
 
 curl 'http://127.0.0.1:3000/api/search?q=migration&limit=20'
@@ -157,8 +158,9 @@ Rate limiting is handled by `@slack/web-api`'s built-in retry — it respects
 
 ## Limitations and out-of-scope
 
-- No user OAuth flow — this is a self-hosted operator tool, secured by the owner
-  token + `ADMIN_PASSWORD`. For multi-user access, add an auth proxy.
+- No auth on the HTTP layer — this is a single-user self-hosted tool, secured
+  by loopback binding. For multi-user or remote access, put it behind a reverse
+  proxy that handles auth + TLS.
 - Files/attachments are not downloaded — only their metadata in `raw_json`.
 - No backfill UI beyond what `conversations.history` returns; messages that
   Slack has already purged are gone.

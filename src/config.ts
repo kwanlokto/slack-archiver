@@ -25,7 +25,6 @@ export interface Config {
   apiHost: string;
   /** Public origin used to build the OAuth redirect URI. Must match a value registered in the Slack app. */
   oauthRedirectUri: string;
-  adminPassword: string;
 }
 
 export function loadConfig(): Config {
@@ -49,6 +48,5 @@ export function loadConfig(): Config {
     apiPort,
     apiHost,
     oauthRedirectUri,
-    adminPassword: optional("ADMIN_PASSWORD", ""),
   };
 }

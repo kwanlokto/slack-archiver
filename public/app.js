@@ -1,7 +1,6 @@
 const $ = (sel) => document.querySelector(sel);
 
 const state = {
-  password: localStorage.getItem("admin-password") || "",
   channels: [],
 };
 
@@ -15,7 +14,6 @@ function toast(msg, kind = "ok") {
 
 async function api(path, opts = {}) {
   const headers = { "content-type": "application/json", ...(opts.headers || {}) };
-  if (opts.admin) headers["x-admin-password"] = state.password;
   const res = await fetch(`/api${path}`, { ...opts, headers });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
@@ -71,13 +69,6 @@ async function refreshChannels() {
   }
 }
 
-$("#save-password").addEventListener("click", () => {
-  state.password = $("#admin-password").value;
-  localStorage.setItem("admin-password", state.password);
-  toast("Saved admin password locally");
-});
-$("#admin-password").value = state.password;
-
 $("#add-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const ref = $("#add-input").value.trim();
@@ -86,7 +77,6 @@ $("#add-form").addEventListener("submit", async (e) => {
     const r = await api("/channels", {
       method: "POST",
       body: JSON.stringify({ channel: ref }),
-      admin: true,
     });
     toast(`Added #${r.channel.name}`);
     $("#add-input").value = "";
@@ -96,7 +86,7 @@ $("#add-form").addEventListener("submit", async (e) => {
 
 $("#tick-now").addEventListener("click", async () => {
   try {
-    await api("/scheduler/tick", { method: "POST", admin: true });
+    await api("/scheduler/tick", { method: "POST" });
     toast("Extraction triggered");
     setTimeout(refreshChannels, 1500);
   } catch (err) { toast(err.message, "err"); }
@@ -110,20 +100,19 @@ $("#channels-table").addEventListener("click", async (e) => {
   try {
     if (act === "delete") {
       if (!confirm(`Remove #${btn.dataset.name} and all archived messages?`)) return;
-      await api(`/channels/${id}`, { method: "DELETE", admin: true });
+      await api(`/channels/${id}`, { method: "DELETE" });
       toast("Removed");
     } else if (act === "toggle") {
       const enabled = btn.dataset.enabled === "1";
       await api(`/channels/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ enabled: !enabled }),
-        admin: true,
       });
       toast(enabled ? "Paused" : "Resumed");
     } else if (act === "extract") {
       btn.disabled = true;
       btn.textContent = "Extracting…";
-      await api(`/channels/${id}/extract`, { method: "POST", admin: true });
+      await api(`/channels/${id}/extract`, { method: "POST" });
       toast("Extracted");
     }
     await refreshChannels();

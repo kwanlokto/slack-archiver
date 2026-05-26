@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router } from "express";
 import * as crypto from "crypto";
 import { WebClient } from "@slack/web-api";
 import type { Runtime } from "../runtime";
@@ -26,21 +26,9 @@ interface OAuthV2Response {
   };
 }
 
-export function buildSetupRouter(runtime: Runtime, adminPassword: string): Router {
+export function buildSetupRouter(runtime: Runtime): Router {
   const r = Router();
   const pendingStates = new Map<string, number>();
-
-  const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
-    if (!adminPassword) {
-      res.status(503).json({ error: "ADMIN_PASSWORD is not configured on the server" });
-      return;
-    }
-    if (req.header("x-admin-password") !== adminPassword) {
-      res.status(401).json({ error: "unauthorized" });
-      return;
-    }
-    next();
-  };
 
   r.get("/status", (_req, res) => {
     const app = runtime.credentials.getApp();
@@ -56,7 +44,7 @@ export function buildSetupRouter(runtime: Runtime, adminPassword: string): Route
     });
   });
 
-  r.post("/credentials", requireAdmin, (req, res) => {
+  r.post("/credentials", (req, res) => {
     const body = req.body as { client_id?: string; client_secret?: string };
     const clientId = (body.client_id ?? "").trim();
     const clientSecret = (body.client_secret ?? "").trim();
@@ -167,7 +155,7 @@ export function buildSetupRouter(runtime: Runtime, adminPassword: string): Route
     })();
   });
 
-  r.post("/disconnect", requireAdmin, (_req, res) => {
+  r.post("/disconnect", (_req, res) => {
     runtime.disconnect();
     res.json({ ok: true });
   });

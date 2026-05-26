@@ -3,23 +3,11 @@ import type { Runtime } from "../runtime";
 import { exportChannel, ExportFormat } from "../exporter";
 import { extractChannel } from "../archiver";
 
-export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
+export function buildRoutes(runtime: Runtime): Router {
   const r = Router();
 
-  const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
-    if (!adminPassword) {
-      res.status(503).json({ error: "ADMIN_PASSWORD is not configured on the server" });
-      return;
-    }
-    if (req.header("x-admin-password") !== adminPassword) {
-      res.status(401).json({ error: "unauthorized" });
-      return;
-    }
-    next();
-  };
-
   /**
-   * Most write endpoints additionally require a live Slack connection — there's
+   * Write endpoints additionally require a live Slack connection — there's
    * no point trying to add a channel if we have no token yet. Reads still work
    * because they hit SQLite, not Slack.
    */
@@ -31,7 +19,7 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     next();
   };
 
-  // ---- Read endpoints (open) ----
+  // ---- Read endpoints ----
 
   r.get("/channels", (_req, res) => {
     const channels = runtime.store.listChannels().map((c) => ({
@@ -102,9 +90,9 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     })();
   });
 
-  // ---- Write endpoints (admin + Slack connection required) ----
+  // ---- Write endpoints (Slack connection required) ----
 
-  r.post("/channels", requireAdmin, requireReady, (req, res, next) => {
+  r.post("/channels", requireReady, (req, res, next) => {
     void (async () => {
       try {
         const ref = String((req.body as { channel?: string }).channel ?? "").trim();
@@ -121,7 +109,7 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     })();
   });
 
-  r.delete("/channels/:slackId", requireAdmin, (req, res) => {
+  r.delete("/channels/:slackId", (req, res) => {
     const ok = runtime.store.removeChannel(req.params.slackId);
     if (!ok) {
       res.status(404).json({ error: "channel not archived" });
@@ -130,7 +118,7 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     res.json({ ok: true });
   });
 
-  r.patch("/channels/:slackId", requireAdmin, (req, res) => {
+  r.patch("/channels/:slackId", (req, res) => {
     const body = req.body as { enabled?: boolean };
     if (typeof body.enabled !== "boolean") {
       res.status(400).json({ error: "body must contain boolean `enabled`" });
@@ -144,7 +132,7 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     res.json({ ok: true });
   });
 
-  r.post("/channels/:slackId/extract", requireAdmin, requireReady, (req, res, next) => {
+  r.post("/channels/:slackId/extract", requireReady, (req, res, next) => {
     void (async () => {
       try {
         const ch = runtime.store.getChannelBySlackId(req.params.slackId);
@@ -160,7 +148,7 @@ export function buildRoutes(runtime: Runtime, adminPassword: string): Router {
     })();
   });
 
-  r.post("/scheduler/tick", requireAdmin, requireReady, (_req, res, next) => {
+  r.post("/scheduler/tick", requireReady, (_req, res, next) => {
     void (async () => {
       try {
         await runtime.scheduler!.tick();

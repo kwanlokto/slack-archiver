@@ -13,11 +13,15 @@ async function main(): Promise<void> {
   await runtime.initialize();
   logStartupStatus(runtime);
 
-  if (!cfg.adminPassword) {
-    console.warn("[startup] WARNING: ADMIN_PASSWORD is empty — admin endpoints will refuse all writes");
+  const isLoopback = cfg.apiHost === "127.0.0.1" || cfg.apiHost === "localhost" || cfg.apiHost === "::1";
+  if (!isLoopback) {
+    console.warn(
+      `[startup] WARNING: API_HOST=${cfg.apiHost} is not loopback. The API has no built-in auth — ` +
+        `put a reverse proxy with auth in front, or bind to 127.0.0.1.`,
+    );
   }
 
-  const app = createServer(runtime, cfg.adminPassword);
+  const app = createServer(runtime);
   const server = app.listen(cfg.apiPort, cfg.apiHost, () => {
     console.log(`[api] listening on http://${cfg.apiHost}:${cfg.apiPort}`);
     if (runtime.status.state !== "ready") {

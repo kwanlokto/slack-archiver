@@ -4,12 +4,12 @@ import { buildRoutes } from "./routes";
 import { buildSetupRouter } from "./setup";
 import type { Runtime } from "../runtime";
 
-export function createServer(runtime: Runtime, adminPassword: string): Express {
+export function createServer(runtime: Runtime): Express {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 
-  app.use("/api/setup", buildSetupRouter(runtime, adminPassword));
-  app.use("/api", buildRoutes(runtime, adminPassword));
+  app.use("/api/setup", buildSetupRouter(runtime));
+  app.use("/api", buildRoutes(runtime));
 
   // If the user opens "/" and there's no token, send them to the wizard.
   // This must run before express.static, which would otherwise serve index.html.
