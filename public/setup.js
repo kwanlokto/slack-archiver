@@ -28,24 +28,20 @@ function renderStatus(s) {
       break;
     case "not_owner":
       box.classList.add("err");
-      box.textContent = `Signed in as @${s.status.user} in ${s.status.team} — but that user is not a workspace owner. Sign in with an owner account.`;
+      box.textContent = `Signed in as @${s.status.user} in ${s.status.team} — but that user is not a workspace owner. Paste a token from an owner account.`;
       $("#disconnect").hidden = false;
-      break;
-    case "credentials_only":
-      box.classList.add("warn");
-      box.textContent = "App credentials saved. Click 'Sign in with Slack' to finish.";
       break;
     case "error":
       box.classList.add("err");
       box.textContent = `Error: ${s.status.message}`;
+      $("#disconnect").hidden = false;
       break;
     case "unconfigured":
     default:
       box.classList.add("warn");
-      box.textContent = "Not configured yet. Follow the steps below.";
+      box.textContent = "No token yet. Paste one below to connect.";
       break;
   }
-  $("#redirect-uri-display").textContent = s.redirect_uri;
   const scopeList = $("#scope-list");
   scopeList.innerHTML = "";
   for (const sc of s.required_scopes) {
@@ -53,7 +49,6 @@ function renderStatus(s) {
     li.innerHTML = `<code>${sc}</code>`;
     scopeList.appendChild(li);
   }
-  if (s.has_client_credentials) $("#creds-saved").hidden = false;
 }
 
 async function loadStatus() {
@@ -65,38 +60,40 @@ async function loadStatus() {
   }
 }
 
-$("#creds-form").addEventListener("submit", async (e) => {
+$("#token-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const client_id = $("#client-id").value.trim();
-  const client_secret = $("#client-secret").value.trim();
+  const token = $("#token-input").value.trim();
+  if (!token) return;
+  const btn = e.target.querySelector("button");
+  btn.disabled = true;
+  btn.textContent = "Connecting…";
   try {
-    await api("/api/setup/credentials", {
+    await api("/api/setup/token", {
       method: "POST",
-      body: JSON.stringify({ client_id, client_secret }),
+      body: JSON.stringify({ token }),
     });
-    toast("Credentials saved");
-    $("#client-secret").value = "";
+    toast("Connected");
+    $("#token-input").value = "";
     await loadStatus();
   } catch (err) {
     toast(err.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Connect";
   }
 });
 
 $("#disconnect").addEventListener("click", async () => {
-  if (!confirm("Disconnect from Slack? You'll need to sign in again to resume archiving.")) return;
+  if (!confirm("Disconnect from Slack? Archived messages stay, but you'll need a new token to resume archiving.")) return;
   try {
     await api("/api/setup/disconnect", { method: "POST" });
     toast("Disconnected");
+    $("#disconnect").hidden = true;
+    $("#open-admin").hidden = true;
     await loadStatus();
   } catch (err) {
     toast(err.message, "err");
   }
 });
-
-// Handle OAuth callback flash query params
-const params = new URLSearchParams(location.search);
-if (params.get("ok") === "1") toast("Signed in successfully");
-if (params.get("error")) toast(`OAuth error: ${params.get("error")}`, "err");
-if (params.toString()) history.replaceState({}, "", location.pathname);
 
 loadStatus();

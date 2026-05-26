@@ -7,7 +7,6 @@ import { verifyOwner } from "./auth";
 
 export type RuntimeStatus =
   | { state: "unconfigured"; message: string }
-  | { state: "credentials_only"; message: string }
   | { state: "not_owner"; user: string; team: string; message: string }
   | { state: "error"; message: string }
   | { state: "ready"; user: string; team: string; userId: string };
@@ -20,7 +19,7 @@ export type RuntimeStatus =
 export class Runtime {
   slack: SlackClient | null = null;
   scheduler: Scheduler | null = null;
-  status: RuntimeStatus = { state: "unconfigured", message: "Not configured" };
+  status: RuntimeStatus = { state: "unconfigured", message: "Open /setup to begin" };
 
   constructor(
     public readonly cfg: Config,
@@ -32,10 +31,7 @@ export class Runtime {
   async initialize(): Promise<void> {
     const token = this.credentials.getAccessToken() ?? this.cfg.envSlackToken;
     if (!token) {
-      const app = this.credentials.getApp();
-      this.status = app
-        ? { state: "credentials_only", message: "App credentials saved — sign in with Slack to finish setup" }
-        : { state: "unconfigured", message: "Open /setup to begin" };
+      this.status = { state: "unconfigured", message: "Open /setup to begin" };
       return;
     }
     await this.activate(token);
@@ -69,11 +65,10 @@ export class Runtime {
     }
   }
 
-  /** Used by /api/setup/disconnect to drop the current token. */
   disconnect(): void {
     this.stop();
     this.credentials.clearAuth();
-    this.status = { state: "credentials_only", message: "Disconnected — sign in again to re-activate" };
+    this.status = { state: "unconfigured", message: "Disconnected — paste a new token to reconnect" };
   }
 
   stop(): void {

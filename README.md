@@ -40,16 +40,23 @@ npm run build
 npm start
 ```
 
-Then open <http://127.0.0.1:3000/setup.html> and walk through the wizard:
+Then open <http://127.0.0.1:3000/setup.html> and follow the wizard:
 
-1. Create a Slack app at <https://api.slack.com/apps> → **From scratch**. The
-   wizard shows you the exact **Redirect URL** and **User Token Scopes** to add.
-2. Paste the app's **Client ID** and **Client Secret** into the wizard.
-3. Click **Sign in with Slack**, approve the scopes, and Slack redirects back
-   with a token. The daemon stores it in `data/credentials.json`, verifies you
-   are a Workspace Owner, and starts the scheduler.
+1. Create a Slack app at <https://api.slack.com/apps> → **From scratch**, in a
+   workspace where you are an Owner.
+2. On the new app's **OAuth & Permissions** page, scroll to **User Token
+   Scopes** and add the scopes the wizard lists
+   (`channels:history`, `channels:read`, `groups:history`, `groups:read`,
+   `users:read`, `team:read`).
+3. Scroll back up and click **Install to Workspace** → **Allow**.
+4. Slack returns you to the OAuth & Permissions page and shows a **User OAuth
+   Token** starting with `xoxp-`. Copy it.
+5. Paste it into the wizard and click **Connect**. The daemon verifies you're a
+   Workspace Owner, stores the token in `data/credentials.json`, and starts the
+   scheduler.
 
-No copy-paste of `xoxp-` tokens required.
+No Redirect URLs, no Client ID/Secret, no OAuth round-trip — Slack hands you the
+token directly after install.
 
 > **Security model.** The HTTP API has no built-in auth — it binds to
 > `127.0.0.1` by default and trusts everything on localhost. If you change
@@ -101,9 +108,7 @@ No auth — protected by binding to loopback only.
 | POST   | `/api/channels/:slackId/extract` | Trigger one extraction for that channel |
 | POST   | `/api/scheduler/tick` | Trigger a full extraction across all channels |
 | GET    | `/api/setup/status` | Current connection status |
-| POST   | `/api/setup/credentials` `{ "client_id": "...", "client_secret": "..." }` | Save Slack app credentials |
-| GET    | `/api/setup/start` | 302 to Slack OAuth |
-| GET    | `/api/setup/callback?code=&state=` | OAuth redirect target |
+| POST   | `/api/setup/token` `{ "token": "xoxp-..." }` | Validate + store a user token |
 | POST   | `/api/setup/disconnect` | Clear stored token |
 | GET    | `/healthz` | Liveness probe |
 

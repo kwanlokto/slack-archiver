@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Slack Archiver — Setup</h1>
-    <p class="hint">One-time wizard to connect a Slack workspace.</p>
+    <p class="hint">Paste a Slack User OAuth Token to connect a workspace.</p>
   </header>
 
   <main>
@@ -19,41 +19,32 @@
     </section>
 
     <section>
-      <h2>Step 1 · Create a Slack app</h2>
+      <h2>How to get a token</h2>
       <ol class="steps">
-        <li>Open <a href="https://api.slack.com/apps" target="_blank" rel="noreferrer">api.slack.com/apps</a> → <strong>Create New App</strong> → <strong>From scratch</strong>. Pick the workspace you own.</li>
-        <li>In the new app, go to <strong>OAuth &amp; Permissions</strong>.</li>
-        <li>Under <strong>Redirect URLs</strong> add <em>exactly</em>:
-          <pre id="redirect-uri-display">loading…</pre>
-        </li>
-        <li>Under <strong>User Token Scopes</strong> add:
+        <li>Open <a href="https://api.slack.com/apps" target="_blank" rel="noreferrer">api.slack.com/apps</a> → <strong>Create New App</strong> → <strong>From scratch</strong>. Pick the workspace you own and name it (e.g. "Archiver").</li>
+        <li>In the new app, left sidebar → <strong>OAuth &amp; Permissions</strong>.</li>
+        <li>Scroll to <strong>Scopes</strong> → <strong>User Token Scopes</strong> (not Bot Token Scopes). Add:
           <ul id="scope-list" class="scope-list"></ul>
         </li>
-        <li>Go to <strong>Basic Information</strong> → <strong>App Credentials</strong> and copy the <strong>Client ID</strong> and <strong>Client Secret</strong>.</li>
+        <li>Scroll <em>up</em> to the top of the same page. Click <strong>Install to Workspace</strong> → <strong>Allow</strong>.</li>
+        <li>Slack drops you back on the OAuth &amp; Permissions page. Copy the <strong>User OAuth Token</strong> that now appears at the top — it starts with <code>xoxp-</code>.</li>
       </ol>
+      <p class="hint">You do <em>not</em> need to configure a Redirect URL — this flow doesn't use one.</p>
     </section>
 
     <section>
-      <h2>Step 2 · Save app credentials</h2>
-      <form id="creds-form">
-        <input id="client-id" placeholder="Client ID" required />
-        <input id="client-secret" type="password" placeholder="Client Secret" required />
-        <button type="submit">Save</button>
+      <h2>Paste your token</h2>
+      <form id="token-form">
+        <input id="token-input" type="password" placeholder="xoxp-…" autocomplete="off" required style="flex:1;min-width:280px" />
+        <button type="submit">Connect</button>
       </form>
-      <p id="creds-saved" class="hint" hidden>Client credentials are saved on this server.</p>
+      <p class="hint">The token is stored in <code>data/credentials.json</code> on this server, with file mode 0600.</p>
     </section>
 
     <section>
-      <h2>Step 3 · Sign in with Slack</h2>
-      <p class="hint">Opens the Slack OAuth screen. After you approve, Slack will redirect back to this server with a token.</p>
-      <a id="signin-link" class="button-link" href="/api/setup/start">Sign in with Slack</a>
-      <button id="disconnect" class="danger" hidden>Disconnect</button>
-    </section>
-
-    <section>
-      <h2>Step 4 · Done</h2>
-      <p class="hint">Once signed in, the daemon will start archiving on the configured cron schedule.</p>
+      <h2>After connecting</h2>
       <a id="open-admin" class="button-link" href="/" hidden>Open admin console →</a>
+      <button id="disconnect" class="danger" hidden>Disconnect</button>
     </section>
   </main>
 

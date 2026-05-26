@@ -50,9 +50,6 @@ function logStartupStatus(runtime: Runtime): void {
     case "not_owner":
       console.warn(`[startup] @${s.user} in ${s.team} is not a workspace owner — scheduler not started`);
       break;
-    case "credentials_only":
-      console.log("[startup] app credentials present, but no Slack token yet — visit /setup.html to sign in");
-      break;
     case "error":
       console.error(`[startup] activation error: ${s.message}`);
       break;

@@ -23,21 +23,17 @@ export interface Config {
   scheduleCron: string;
   apiPort: number;
   apiHost: string;
-  /** Public origin used to build the OAuth redirect URI. Must match a value registered in the Slack app. */
-  oauthRedirectUri: string;
 }
 
 export function loadConfig(): Config {
   const dbPath = path.resolve(optional("DB_PATH", "./data/archive.db"));
-  const credentialsPath = path.resolve(optional("CREDENTIALS_PATH", path.join(path.dirname(dbPath), "credentials.json")));
+  const credentialsPath = path.resolve(
+    optional("CREDENTIALS_PATH", path.join(path.dirname(dbPath), "credentials.json")),
+  );
   const exportDir = path.resolve(optional("EXPORT_DIR", "./exports"));
 
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   fs.mkdirSync(exportDir, { recursive: true });
-
-  const apiPort = parseInt(optional("API_PORT", "3000"), 10);
-  const apiHost = optional("API_HOST", "127.0.0.1");
-  const oauthRedirectUri = optional("OAUTH_REDIRECT_URI", `http://127.0.0.1:${apiPort}/api/setup/callback`);
 
   return {
     envSlackToken: optionalEmpty("SLACK_TOKEN"),
@@ -45,8 +41,7 @@ export function loadConfig(): Config {
     credentialsPath,
     exportDir,
     scheduleCron: optional("SCHEDULE_CRON", "*/10 * * * *"),
-    apiPort,
-    apiHost,
-    oauthRedirectUri,
+    apiPort: parseInt(optional("API_PORT", "3000"), 10),
+    apiHost: optional("API_HOST", "127.0.0.1"),
   };
 }

@@ -1,29 +1,22 @@
 import * as fs from "fs";
 import * as path from "path";
 
-export interface AppCredentials {
-  client_id: string;
-  client_secret: string;
-}
-
 export interface SlackAuth {
   access_token: string; // xoxp-...
-  scope: string;
-  team_id: string;
-  team_name: string;
-  authed_user_id: string;
+  team_id?: string;
+  team_name?: string;
+  authed_user_id?: string;
   user_name?: string;
 }
 
 export interface StoredCredentials {
-  app?: AppCredentials;
   auth?: SlackAuth;
 }
 
 /**
- * Persists OAuth state to a JSON file alongside the database. Values written
- * here take precedence over .env (so the wizard's choice wins). The file path
- * itself sits inside DB_PATH's directory and is gitignored via `data/`.
+ * Persists the Slack user token (and a little workspace metadata for the UI)
+ * to a JSON file alongside the database. Values written here take precedence
+ * over `.env`'s SLACK_TOKEN so the wizard's choice wins.
  */
 export class CredentialsStore {
   private cache: StoredCredentials | null = null;
@@ -52,23 +45,12 @@ export class CredentialsStore {
     this.cache = creds;
   }
 
-  setApp(app: AppCredentials): void {
-    const current = this.load();
-    this.save({ ...current, app });
-  }
-
   setAuth(auth: SlackAuth): void {
-    const current = this.load();
-    this.save({ ...current, auth });
+    this.save({ auth });
   }
 
   clearAuth(): void {
-    const current = this.load();
-    this.save({ ...current, auth: undefined });
-  }
-
-  getApp(): AppCredentials | undefined {
-    return this.load().app;
+    this.save({});
   }
 
   getAuth(): SlackAuth | undefined {
