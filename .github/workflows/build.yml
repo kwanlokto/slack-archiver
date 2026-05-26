@@ -1,0 +1,82 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: node20-linux-x64
+            label: linux-x64
+            bin: slack-archiver-linux-x64
+
+          - runner: macos-13
+            target: node20-macos-x64
+            label: macos-x64
+            bin: slack-archiver-macos-x64
+
+          - runner: macos-latest
+            target: node20-macos-arm64
+            label: macos-arm64
+            bin: slack-archiver-macos-arm64
+
+          - runner: windows-latest
+            target: node20-win-x64
+            label: win-x64
+            bin: slack-archiver-win-x64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Package binary
+        run: npx --yes @yao-pkg/pkg . --target ${{ matrix.target }} --output ${{ matrix.bin }} --compress GZip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.bin }}
+          path: ${{ matrix.bin }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: artifacts/*
+          generate_release_notes: true
