@@ -20,11 +20,6 @@ jobs:
             label: linux-x64
             bin: slack-archiver-linux-x64
 
-          - runner: macos-13
-            target: node20-macos-x64
-            label: macos-x64
-            bin: slack-archiver-macos-x64
-
           - runner: macos-latest
             target: node20-macos-arm64
             label: macos-arm64
