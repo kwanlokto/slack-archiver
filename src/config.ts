@@ -1,8 +1,10 @@
 import * as dotenv from "dotenv";
 import * as path from "path";
 import * as fs from "fs";
+import { resolveAppPath, appDir } from "./paths";
 
-dotenv.config();
+// Look for .env next to the exe (when packaged) or in cwd (when running from source).
+dotenv.config({ path: path.join(appDir(), ".env") });
 
 function optional(name: string, fallback: string): string {
   const v = process.env[name];
@@ -26,11 +28,11 @@ export interface Config {
 }
 
 export function loadConfig(): Config {
-  const dbPath = path.resolve(optional("DB_PATH", "./data/archive.db"));
-  const credentialsPath = path.resolve(
+  const dbPath = resolveAppPath(optional("DB_PATH", "./data/archive.db"));
+  const credentialsPath = resolveAppPath(
     optional("CREDENTIALS_PATH", path.join(path.dirname(dbPath), "credentials.json")),
   );
-  const exportDir = path.resolve(optional("EXPORT_DIR", "./exports"));
+  const exportDir = resolveAppPath(optional("EXPORT_DIR", "./exports"));
 
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   fs.mkdirSync(exportDir, { recursive: true });

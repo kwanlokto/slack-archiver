@@ -161,6 +161,39 @@ Rate limiting is handled by `@slack/web-api`'s built-in retry — it respects
 - Bind `API_HOST=0.0.0.0` only if you trust your network; otherwise keep it on
   loopback and put a reverse proxy in front for TLS + real auth.
 
+## Troubleshooting the packaged .exe
+
+When you double-click `slack-archiver-*.exe` and the window closes
+instantly, the daemon hit a startup error before the HTTP server came up.
+Two ways to see what happened:
+
+1. **Read the log file.** A `slack-archiver.log` is written next to the
+   `.exe`. It contains a timestamped copy of everything that would have
+   printed to the console, including the full stack of the fatal error.
+2. **Run it from a terminal.** Open `cmd` or PowerShell, `cd` to the folder
+   containing the .exe, and run `.\slack-archiver-win.exe`. On a fatal
+   error the daemon now prints `Press Enter to exit…` and waits, so the
+   window stays open long enough to read the stack.
+
+### Common causes
+
+| Symptom in the log | What it means | Fix |
+| --- | --- | --- |
+| `EADDRINUSE` on port 3000 | Another copy of the daemon, or a different app, owns port 3000 | Kill it in Task Manager, or set `API_PORT=3100` in `.env` next to the exe |
+| `ENOENT` opening the SQLite file | The folder you double-clicked from is read-only (e.g. inside an unzipped temp dir) | Move the .exe to a writable folder like `C:\slack-archiver\` |
+| `Could not locate the bindings file` (better-sqlite3) | pkg failed to extract the native module — usually a corrupt download | Re-run `npm run package`, copy the fresh .exe out |
+| Daemon stays running but `slack is not working` | No token configured | Open `http://127.0.0.1:3000/setup.html` and paste an `xoxp-` token |
+
+The .exe expects to find (and will create) these files **next to itself**:
+
+- `.env` — optional config overrides
+- `data/archive.db` — the SQLite archive
+- `data/credentials.json` — your Slack token, mode 0600
+- `exports/` — files written by the export endpoint
+- `slack-archiver.log` — append-only log
+
+If you put the .exe somewhere the user can't write to, none of that works.
+
 ## Limitations and out-of-scope
 
 - No auth on the HTTP layer — this is a single-user self-hosted tool, secured
