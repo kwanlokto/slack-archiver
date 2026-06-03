@@ -1,7 +1,8 @@
-import { initFileLogger } from "./logger";
-
-// Initialize the logger FIRST so any subsequent error gets written to disk.
-const logPath = initFileLogger();
+// MUST be the first import — initializes the file logger and process-level
+// crash handlers BEFORE any other module is loaded. That way an import-time
+// crash (e.g. better-sqlite3 native binding fails to load) still ends up in
+// slack-archiver.log instead of disappearing with the console window.
+import { logPath, pauseIfInteractive } from "./logger";
 
 import { loadConfig } from "./config";
 import { Store } from "./db";
@@ -10,7 +11,7 @@ import { Runtime } from "./runtime";
 import { createServer } from "./api/server";
 import { isPackaged, appDir } from "./paths";
 
-async function main(): Promise<void> {
+async function startDaemon(): Promise<void> {
   console.log(`[startup] slack-archiver booting`);
   console.log(`[startup] app dir: ${appDir()}`);
   console.log(`[startup] log file: ${logPath}`);
@@ -52,7 +53,7 @@ async function main(): Promise<void> {
     } else {
       console.error("[api] server error:", err);
     }
-    process.exit(1);
+    void pauseIfInteractive().finally(() => process.exit(1));
   });
 
   const shutdown = (signal: string) => {
@@ -85,31 +86,34 @@ function logStartupStatus(runtime: Runtime): void {
   }
 }
 
-/** Keep the console window open if the user double-clicked the .exe. */
-async function pauseIfInteractive(): Promise<void> {
-  if (!process.stdin.isTTY) return;
-  console.error("\nPress Enter to exit…");
-  await new Promise<void>((resolve) => {
-    process.stdin.resume();
-    process.stdin.once("data", () => resolve());
+// Dual-mode entry: if invoked with a known CLI subcommand or version/help
+// flag, hand off to commander; otherwise start the daemon.
+// We can't rely on `argv.length` because pkg's bootstrap injects extra
+// internal entries into `process.argv` that aren't present under plain Node.
+const CLI_SUBCOMMANDS = new Set([
+  "verify",
+  "add-channel",
+  "remove-channel",
+  "list-channels",
+  "enable",
+  "disable",
+  "extract",
+  "export",
+  "help",
+  "-h",
+  "--help",
+  "-V",
+  "--version",
+]);
+
+if (process.argv.some((a) => CLI_SUBCOMMANDS.has(a))) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require("./cli");
+} else {
+  startDaemon().catch(async (err) => {
+    console.error("[fatal] startup failed:", err);
+    console.error(`[fatal] full log: ${logPath}`);
+    await pauseIfInteractive();
+    process.exit(1);
   });
 }
-
-process.on("uncaughtException", async (err) => {
-  console.error("[fatal] uncaughtException:", err);
-  await pauseIfInteractive();
-  process.exit(1);
-});
-
-process.on("unhandledRejection", async (reason) => {
-  console.error("[fatal] unhandledRejection:", reason);
-  await pauseIfInteractive();
-  process.exit(1);
-});
-
-main().catch(async (err) => {
-  console.error("[fatal] startup failed:", err);
-  console.error(`[fatal] full details in: ${logPath}`);
-  await pauseIfInteractive();
-  process.exit(1);
-});

@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "bin": {
-    "slack-archiver": "dist/cli.js"
+    "slack-archiver": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -22,6 +22,9 @@
     "assets": [
       "public/**/*",
       "node_modules/better-sqlite3/build/Release/*.node"
+    ],
+    "targets": [
+      "node20-win-x64"
     ],
     "outputPath": "release"
   },
